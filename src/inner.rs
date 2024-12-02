@@ -6,7 +6,7 @@ use crossbeam::deque::Injector;
 use rand::seq::IteratorRandom;
 use std::{
     num::NonZeroUsize,
-    sync::{atomic::Ordering, Arc},
+    sync::Arc,
     thread::{self},
 };
 
@@ -44,7 +44,7 @@ impl ThreadPoolInner {
     /// Ожидание завершения работы всех потоков
     pub(crate) fn join(self) -> thread::Result<()> {
         for wh in self.workers {
-            wh.thread_handle.join()?;
+            wh.join()?;
         }
 
         Ok(())
@@ -67,10 +67,7 @@ impl ThreadPoolInner {
     /// Оповестить одного воркера о появлении новых задач. Если в `idx`, передано `None`, то будет
     /// оповещен любой воркер в спящем состоянии `idle`.
     fn notify_one_waiter(&self, idx: Option<usize>) {
-        let iter = self
-            .workers
-            .iter()
-            .filter(|w| w.idle.load(Ordering::Acquire));
+        let iter = self.workers.iter().filter(|w| w.is_idle());
 
         let worker = match idx {
             Some(idx) => iter
@@ -80,13 +77,7 @@ impl ThreadPoolInner {
         };
 
         if let Some(worker) = worker {
-            if worker
-                .idle
-                .compare_exchange(true, false, Ordering::Release, Ordering::Relaxed)
-                .is_ok()
-            {
-                worker.thread_handle.thread().unpark();
-            };
+            worker.unpark();
         }
     }
 }

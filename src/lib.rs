@@ -7,9 +7,11 @@ pub use builder::WorkStealThreadPoolBuilder;
 use inner::ThreadPoolInner;
 use std::{any::Any, num::NonZeroUsize, sync::Arc, thread};
 
+/// Пул потоков с реализацией механизма "воровства" задач
 pub struct WorkStealThreadPool(ThreadPoolInner);
 
 impl WorkStealThreadPool {
+    /// Builder пула потоков
     pub fn builder() -> WorkStealThreadPoolBuilder {
         WorkStealThreadPoolBuilder::default()
     }
@@ -32,4 +34,5 @@ impl WorkStealThreadPool {
 /// Job for worker
 pub type Job = Box<dyn FnOnce() + Send>;
 
+/// Функция, которая обрабатывает панику
 type PanicHandler = Arc<dyn Fn(Box<dyn Any + Send>) + Send + Sync>;
