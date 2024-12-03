@@ -2,16 +2,19 @@ mod builder;
 mod inner;
 mod worker;
 
+#[cfg(test)]
+mod tests;
+
 pub use builder::WorkStealThreadPoolBuilder;
 
 use inner::ThreadPoolInner;
 use std::{any::Any, num::NonZeroUsize, sync::Arc, thread};
 
-/// Пул потоков с реализацией механизма "воровства" задач
+/// Thread pool with "work stealing" mechanism
 pub struct WorkStealThreadPool(ThreadPoolInner);
 
 impl WorkStealThreadPool {
-    /// Builder пула потоков
+    /// Thread pool builder
     pub fn builder() -> WorkStealThreadPoolBuilder {
         WorkStealThreadPoolBuilder::default()
     }
@@ -34,5 +37,5 @@ impl WorkStealThreadPool {
 /// Job for worker
 pub type Job = Box<dyn FnOnce() + Send>;
 
-/// Функция, которая обрабатывает панику
+/// Function that handles panics
 type PanicHandler = Arc<dyn Fn(Box<dyn Any + Send>) + Send + Sync>;

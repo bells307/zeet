@@ -1,10 +1,15 @@
 [package]
 name = "zeet"
+description = "Work-stealing thread pool built on crossbeam"
 version = "0.1.0"
+authors = ["Bells307"]
 edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/bells307/zeet"
 
 [dependencies]
 crossbeam = "0.8.4"
 rand = "0.8.5"
 num_cpus = "1.16.0"
 parking_lot = "0.12.3"
+atomic_enum = "0.3.0"

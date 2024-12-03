@@ -1,5 +1,5 @@
 use crate::{
-    worker::{Worker, WorkerHandle},
+    worker::{handle::WorkerHandle, Worker},
     Job, PanicHandler,
 };
 use crossbeam::deque::Injector;
@@ -11,7 +11,7 @@ use std::{
 };
 
 pub(crate) struct ThreadPoolInner {
-    injector: Arc<Injector<Job>>,
+    global: Arc<Injector<Job>>,
     workers: Vec<WorkerHandle>,
 }
 
@@ -19,13 +19,13 @@ impl ThreadPoolInner {
     pub(crate) fn new(thread_count: NonZeroUsize, panic_handler: Option<PanicHandler>) -> Self {
         let thread_count = thread_count.get();
 
-        let injector = Arc::new(Injector::new());
+        let global = Arc::new(Injector::new());
 
         let mut workers = Vec::with_capacity(thread_count);
         let mut stealers = Vec::with_capacity(thread_count);
 
         for idx in 0..thread_count {
-            let worker = Worker::new(idx, Arc::clone(&injector), panic_handler.clone());
+            let worker = Worker::new(idx, Arc::clone(&global), panic_handler.clone());
             let stealer = worker.stealer();
             workers.push(worker);
             stealers.push(stealer);
@@ -38,10 +38,10 @@ impl ThreadPoolInner {
             .map(|w| w.run(Arc::clone(&stealers)))
             .collect();
 
-        ThreadPoolInner { injector, workers }
+        ThreadPoolInner { global, workers }
     }
 
-    /// Ожидание завершения работы всех потоков
+    /// Wait for all threads to finish their tasks
     pub(crate) fn join(self) -> thread::Result<()> {
         for wh in self.workers {
             wh.join()?;
@@ -50,13 +50,13 @@ impl ThreadPoolInner {
         Ok(())
     }
 
-    /// Постановка задачи в очередь. Если не удалось поставить задачу в очередь локального потока,
-    /// то она будет установлена в общую очередь
+    /// Add a job to the queue. If it fails to be added to a local thread queue,
+    /// it will be placed in the global queue.
     pub(crate) fn spawn(&self, job: Job) {
         let idx = match Worker::spawn_job(job) {
             Ok(idx) => Some(idx),
             Err(job) => {
-                self.injector.push(job);
+                self.global.push(job);
                 None
             }
         };
@@ -64,8 +64,8 @@ impl ThreadPoolInner {
         self.notify_one_waiter(idx);
     }
 
-    /// Оповестить одного воркера о появлении новых задач. Если в `idx`, передано `None`, то будет
-    /// оповещен любой воркер в спящем состоянии `idle`.
+    /// Notify one worker about new tasks. If `idx` is `None`, any idle worker
+    /// will be notified.
     fn notify_one_waiter(&self, idx: Option<usize>) {
         let iter = self.workers.iter().filter(|w| w.is_idle());
 
@@ -77,7 +77,7 @@ impl ThreadPoolInner {
         };
 
         if let Some(worker) = worker {
-            worker.unpark();
+            worker.unpark_idle();
         }
     }
 }

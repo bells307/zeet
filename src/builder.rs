@@ -8,13 +8,13 @@ pub struct WorkStealThreadPoolBuilder {
 }
 
 impl WorkStealThreadPoolBuilder {
-    /// Максимальное количество потоков операционной системы
+    /// Maximum number of operating system threads
     pub fn max_threads(mut self, val: NonZeroUsize) -> Self {
         self.max_threads = Some(val);
         self
     }
 
-    /// Обработчик паники
+    /// Panic handler
     pub fn panic_handler(
         mut self,
         f: impl Fn(Box<dyn Any + Send>) + Send + Sync + 'static,

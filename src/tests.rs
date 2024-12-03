@@ -1,12 +1,8 @@
-# zeet
-Work-stealing thread pool built on `crossbeam`.
-
-### Example
-```rust
-use zeet::WorkStealThreadPool;
+use crate::WorkStealThreadPool;
 use std::sync::mpsc;
 
-fn main() {
+#[test]
+fn test_thread_pool() {
     let thread_count = num_cpus::get();
 
     let tp = WorkStealThreadPool::builder()
@@ -26,4 +22,3 @@ fn main() {
 
     tp.join().unwrap();
 }
-```
